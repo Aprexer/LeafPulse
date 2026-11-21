@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "1.1.3",
+          "buildVersion": "103",
+          "date": "2026-11-21",
+          "localizedDescription": "Manual build",
+          "downloadURL": "https://github.com/Aprexer/LeafPulse/releases/download/v1.1.3/LeafPulse.ipa",
+          "size": 573243,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "1.1.2",
           "buildVersion": "102",
           "date": "2026-11-21",
@@ -36,11 +45,11 @@
           "NSLocalNetworkUsageDescription": "Send your LEAF's battery readings to your Home Assistant server on your home network."
         }
       },
-      "version": "1.1.2",
+      "version": "1.1.3",
       "versionDate": "2026-11-21",
-      "versionDescription": "LeafPulse 1.1: lowercase app ID com.aprexer.leafpulse\n\n- App ID com.aprexer.leafpulse (widget com.aprexer.leafpulse.widgets). iOS treats this as a new app: delete older LeafPulse installs first, then re-enter your Home Assistant details and tap Find my vLinker.\n- The app bundle is now LeafPulse.app.\n- Old releases are removed from this page; only current builds are offered.",
-      "downloadURL": "https://github.com/Aprexer/LeafPulse/releases/download/v1.1.2/LeafPulse.ipa",
-      "size": 573250
+      "versionDescription": "Manual build",
+      "downloadURL": "https://github.com/Aprexer/LeafPulse/releases/download/v1.1.3/LeafPulse.ipa",
+      "size": 573243
     }
   ],
   "news": [],
