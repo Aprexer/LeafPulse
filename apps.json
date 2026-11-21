@@ -2,7 +2,7 @@
   "name": "LeafPulse",
   "identifier": "com.aprexer.leafpulse.source",
   "subtitle": "Nissan LEAF battery stats for Home Assistant",
-  "description": "Official source for LeafPulse, a free iOS app for Nissan LEAF owners who use Home Assistant. Tested on the 2020–2021 LEAF S Plus (62 kWh) with a Vgate vLinker MC+. github.com/Aprexer/leafpulse",
+  "description": "Official source for LeafPulse, a free iOS app for Nissan LEAF owners who use Home Assistant. Tested on the 2020–2021 LEAF S Plus (62 kWh) with a Vgate vLinker MC+. github.com/Aprexer/LeafPulse",
   "tintColor": "#2EE6A6",
   "featuredApps": [
     "com.aprexer.leafpulse"
@@ -13,7 +13,7 @@
       "bundleIdentifier": "com.aprexer.leafpulse",
       "developerName": "Aprexer",
       "subtitle": "LEAF battery stats, live in Home Assistant.",
-      "localizedDescription": "LeafPulse reads your Nissan LEAF battery through a Vgate vLinker MC+ over Bluetooth: state of charge, health (SOH), capacity, Hx, all 96 cell-pair voltages and pack temperatures. It runs in the background, reconnects when the car is on, and sends readings to Home Assistant (queued and retried when you're offline) so your charger can stop at your chosen limit.\n\nTested on the 2020–2021 LEAF S Plus (62 kWh). Other LEAF models may work but haven't been tested. Requires Home Assistant for the charging features.\n\nFree, by Aprexer: github.com/Aprexer/leafpulse",
+      "localizedDescription": "LeafPulse reads your Nissan LEAF battery through a Vgate vLinker MC+ over Bluetooth: state of charge, health (SOH), capacity, Hx, all 96 cell-pair voltages and pack temperatures. It runs in the background, reconnects when the car is on, and sends readings to Home Assistant (queued and retried when you're offline) so your charger can stop at your chosen limit.\n\nTested on the 2020–2021 LEAF S Plus (62 kWh). Other LEAF models may work but haven't been tested. Requires Home Assistant for the charging features.\n\nFree, by Aprexer: github.com/Aprexer/LeafPulse",
       "iconURL": "https://raw.githubusercontent.com/Aprexer/LeafPulse/main/assets/icon.png",
       "tintColor": "#2EE6A6",
       "category": "utilities",
