@@ -11,7 +11,7 @@ blueprint:
     unplug. If the last reading is too old to trust, the automation tells you and
     does not stop the charge.
   domain: automation
-  source_url: https://github.com/Aprexer/leafpulse/blob/main/home-assistant/leafpulse_charge_limit_blueprint.yaml
+  source_url: https://github.com/Aprexer/LeafPulse/blob/main/home-assistant/leafpulse_charge_limit_blueprint.yaml
   input:
     charger_status:
       name: Charger status sensor

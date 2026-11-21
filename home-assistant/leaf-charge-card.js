@@ -1,5 +1,5 @@
 // LeafPulse Home Assistant card — Copyright (C) 2026 Aprexer
-// SPDX-License-Identifier: GPL-3.0-or-later — https://github.com/Aprexer/leafpulse
+// SPDX-License-Identifier: GPL-3.0-or-later — https://github.com/Aprexer/LeafPulse
 /* Leaf charge card — custom Lovelace card for a Nissan LEAF on a Wallbox.
    Reads the LeafPulse app sensors, the Wallbox integration and the
    charge-limit helpers. type: custom:leaf-charge-card  (optional: wallbox: <prefix>) */
@@ -295,7 +295,7 @@
       e.foot.textContent = socEnt
         ? (live ? 'Live from LeafPulse' : `Not live · last update from LeafPulse ${this._ago(age)}`)
         : 'Waiting for the first reading from the LeafPulse app';
-      e.foot.title = 'LeafPulse by Aprexer · github.com/Aprexer/leafpulse';
+      e.foot.title = 'LeafPulse by Aprexer · github.com/Aprexer/LeafPulse';
     }
 
     _vehicle() {

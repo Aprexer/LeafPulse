@@ -57,14 +57,14 @@ Made by **[Aprexer](https://github.com/Aprexer)**. Independent project, not affi
 Add this source:
 
 ```
-https://raw.githubusercontent.com/Aprexer/leafpulse/main/apps.json
+https://raw.githubusercontent.com/Aprexer/LeafPulse/main/apps.json
 ```
 
 Then install **LeafPulse** from it. The store signs it with your own certificate, and new versions show up as updates.
 
-### Moving from 1.0.x
+### Moving from an older LeafPulse
 
-From 1.1 the app's ID is `com.aprexer.LeafPulse`, so iOS treats it as a new app. Delete the old LeafPulse, install the new one from the source, then re-enter your Home Assistant URL and token and tap **Find my vLinker** once.
+The app's ID is now `com.aprexer.leafpulse`, so iOS treats it as a new app. Delete any older LeafPulse, install it again from the source, then re-enter your Home Assistant URL and token and tap **Find my vLinker** once.
 
 ## Setup
 
@@ -94,7 +94,7 @@ If you install with a signing service (Flekstore, AltStore, etc.), the widget fi
    ```
 2. Restart Home Assistant. This adds the charge-limit helpers, `sensor.leaf_estimated_state_of_charge` and `sensor.leaf_charge_time_remaining`.
 3. Import the blueprint: **Settings → Automations & scenes → Blueprints → Import blueprint**, and paste
-   `https://github.com/Aprexer/leafpulse/blob/main/home-assistant/leafpulse_charge_limit_blueprint.yaml`
+   `https://github.com/Aprexer/LeafPulse/blob/main/home-assistant/leafpulse_charge_limit_blueprint.yaml`
 4. Create an automation from it and pick your charger's status, power, energy and pause/resume entities, plus your phone's notify service.
 
 How it works: when you plug in, it takes LeafPulse's last reading (if it's under 12 hours old, adjustable) or the previous charge's estimate if the car hasn't reported since. It then adds the charger's energy, minus about 12% charging losses (adjustable), and pauses the charger at your limit. If no reading is recent enough, it tells you and **doesn't** stop that charge. A fresh reading from the car always overrides the estimate.
@@ -109,7 +109,7 @@ LeafPulse is **free to download and use**. Copyright (C) 2026 Aprexer. All right
 - **You can't** sell it, re-upload the IPA elsewhere, rebrand it, or publish it (or a copy of it) on the App Store or any other store without written permission.
 - It comes with **no warranty**. Check its readings against another tool before relying on them.
 
-The app's source code is private. Versions **1.0.10 and earlier** were released under GPL-3.0 (`LICENSE-GPL-3.0`) and stay under it; open an Issue if you need their source. The **Home Assistant card, package and blueprint** in `home-assistant/` are GPL-3.0 too, so you can adapt them freely.
+The app's source code is private. Versions **1.0.10 and earlier** were released under GPL-3.0 (`LICENSE-GPL-3.0`) and stay under it; they're no longer offered here, but open an Issue if you need their source. The **Home Assistant card, package and blueprint** in `home-assistant/` are GPL-3.0 too, so you can adapt them freely.
 
 If you see LeafPulse being sold or published by someone else, please open an Issue.
 

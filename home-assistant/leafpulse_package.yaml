@@ -1,6 +1,6 @@
 # LeafPulse — Home Assistant package (helpers and sensors for the charge limit)
 # SPDX-License-Identifier: GPL-3.0-or-later
-# https://github.com/Aprexer/leafpulse
+# https://github.com/Aprexer/LeafPulse
 #
 # Install:
 #   1. Save this file as  config/packages/leafpulse.yaml
