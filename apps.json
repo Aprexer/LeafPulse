@@ -1,0 +1,49 @@
+{
+  "name": "LeafPulse",
+  "identifier": "com.aprexer.leafpulse.source",
+  "subtitle": "Nissan LEAF battery stats for Home Assistant",
+  "description": "Official source for LeafPulse, a free iOS app for Nissan LEAF owners who use Home Assistant. Tested on the 2020–2021 LEAF S Plus (62 kWh) with a Vgate vLinker MC+. github.com/Aprexer/leafpulse",
+  "tintColor": "#2EE6A6",
+  "featuredApps": [
+    "com.aprexer.LeafPulse"
+  ],
+  "apps": [
+    {
+      "name": "LeafPulse",
+      "bundleIdentifier": "com.aprexer.LeafPulse",
+      "developerName": "Aprexer",
+      "subtitle": "LEAF battery stats, live in Home Assistant.",
+      "localizedDescription": "LeafPulse reads your Nissan LEAF battery through a Vgate vLinker MC+ over Bluetooth: state of charge, health (SOH), capacity, Hx, all 96 cell-pair voltages and pack temperatures. It runs in the background, reconnects when the car is on, and sends readings to Home Assistant (queued and retried when you're offline) so your charger can stop at your chosen limit.\n\nTested on the 2020–2021 LEAF S Plus (62 kWh). Other LEAF models may work but haven't been tested. Requires Home Assistant for the charging features.\n\nFree, by Aprexer: github.com/Aprexer/leafpulse",
+      "iconURL": "https://raw.githubusercontent.com/Aprexer/leafpulse/main/assets/icon.png",
+      "tintColor": "#2EE6A6",
+      "category": "utilities",
+      "screenshots": [],
+      "versions": [
+        {
+          "version": "1.1.1",
+          "buildVersion": "101",
+          "date": "2026-11-21",
+          "localizedDescription": "Manual build",
+          "downloadURL": "https://github.com/Aprexer/leafpulse/releases/download/v1.1.1/LeafPulse.ipa",
+          "size": 573729,
+          "minOSVersion": "17.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSBluetoothAlwaysUsageDescription": "Connect to your vLinker MC+ to display your LEAF's battery readings.",
+          "NSLocalNetworkUsageDescription": "Send your LEAF's battery readings to your Home Assistant server on your home network."
+        }
+      },
+      "version": "1.1.1",
+      "versionDate": "2026-11-21",
+      "versionDescription": "Manual build",
+      "downloadURL": "https://github.com/Aprexer/leafpulse/releases/download/v1.1.1/LeafPulse.ipa",
+      "size": 573729
+    }
+  ],
+  "news": [],
+  "website": "https://github.com/Aprexer/leafpulse",
+  "iconURL": "https://raw.githubusercontent.com/Aprexer/leafpulse/main/assets/icon.png"
+}

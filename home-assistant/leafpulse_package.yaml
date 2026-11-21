@@ -1,0 +1,135 @@
+# LeafPulse — Home Assistant package (helpers and sensors for the charge limit)
+# SPDX-License-Identifier: GPL-3.0-or-later
+# https://github.com/Aprexer/leafpulse
+#
+# Install:
+#   1. Save this file as  config/packages/leafpulse.yaml
+#   2. In configuration.yaml add (once):
+#        homeassistant:
+#          packages: !include_dir_named packages
+#   3. Restart Home Assistant.
+#   4. Import the blueprint (leafpulse_charge_limit_blueprint.yaml) and create an
+#      automation from it with your charger's entities.
+#
+# Nothing in this file is charger-specific. The blueprint automation fills the
+# session helpers below from your charger's sensors.
+
+input_number:
+  leaf_charge_target:
+    name: Leaf charge limit
+    min: 50
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-80
+  leaf_charging_efficiency:
+    name: Leaf charging efficiency
+    min: 70
+    max: 100
+    step: 1
+    initial: 88
+    unit_of_measurement: "%"
+    icon: mdi:transmission-tower-import
+  # Session state, written by the blueprint automation. -1 means "unknown".
+  leaf_soc_at_plug_in:
+    name: Leaf SOC at plug-in
+    min: -1
+    max: 100
+    step: 0.1
+    mode: box
+    unit_of_measurement: "%"
+  leaf_session_energy:
+    name: Leaf energy added this session
+    min: 0
+    max: 200
+    step: 0.01
+    mode: box
+    unit_of_measurement: kWh
+  leaf_energy_baseline:
+    name: Leaf charger energy at plug-in
+    min: 0
+    max: 1000000
+    step: 0.01
+    mode: box
+    unit_of_measurement: kWh
+  leaf_charger_power:
+    name: Leaf charger power
+    min: 0
+    max: 400
+    step: 0.01
+    mode: box
+    unit_of_measurement: kW
+
+input_boolean:
+  leaf_charge_bypass:
+    name: Leaf charge to 100% (bypass)
+    icon: mdi:rocket-launch
+
+input_datetime:
+  leaf_charge_started:
+    name: Leaf charge session started
+    has_date: true
+    has_time: true
+
+template:
+  - sensor:
+      - name: Leaf estimated state of charge
+        unique_id: leafpulse_estimated_state_of_charge
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        icon: mdi:battery-charging
+        # Fresh reading from the app wins. While plugged in, the estimate is the SOC
+        # at plug-in plus energy added (after losses) over the pack's capacity.
+        # It is only used when the plug-in is newer than the last real reading.
+        state: >
+          {% set m = states('sensor.leaf_state_of_charge') | float(none) %}
+          {% set read = state_attr('sensor.leaf_state_of_charge', 'updated_at') %}
+          {% set read_ts = as_timestamp(read, 0) if read else 0 %}
+          {% set start_soc = states('input_number.leaf_soc_at_plug_in') | float(-1) %}
+          {% set started = as_timestamp(states('input_datetime.leaf_charge_started'), 0) %}
+          {% set added = states('input_number.leaf_session_energy') | float(0) %}
+          {% set cap = states('sensor.leaf_battery_capacity_kwh') | float(0) %}
+          {% set eff = states('input_number.leaf_charging_efficiency') | float(88) / 100 %}
+          {% if m is not none and as_timestamp(now()) - read_ts < 300 %}
+            {{ m | round(1) }}
+          {% elif start_soc >= 0 and cap > 5 and started > read_ts %}
+            {{ [100, start_soc + added * eff / cap * 100] | min | round(1) }}
+          {% elif m is not none %}
+            {{ m | round(1) }}
+          {% else %}
+            {{ none }}
+          {% endif %}
+        availability: >
+          {{ states('sensor.leaf_state_of_charge') | is_number
+             or states('input_number.leaf_soc_at_plug_in') | float(-1) >= 0 }}
+        attributes:
+          source: >
+            {% set read = state_attr('sensor.leaf_state_of_charge', 'updated_at') %}
+            {% set read_ts = as_timestamp(read, 0) if read else 0 %}
+            {% set started = as_timestamp(states('input_datetime.leaf_charge_started'), 0) %}
+            {% if as_timestamp(now()) - read_ts < 300 %}live reading
+            {% elif states('input_number.leaf_soc_at_plug_in') | float(-1) >= 0 and started > read_ts %}estimated from energy added
+            {% else %}last reading{% endif %}
+          reading_time: "{{ state_attr('sensor.leaf_state_of_charge', 'updated_at') }}"
+
+      - name: Leaf charge time remaining
+        unique_id: leafpulse_charge_time_remaining
+        unit_of_measurement: min
+        device_class: duration
+        icon: mdi:timer-sand
+        state: >
+          {% set soc = states('sensor.leaf_estimated_state_of_charge') | float(none) %}
+          {% set target = 100 if is_state('input_boolean.leaf_charge_bypass', 'on')
+                          else states('input_number.leaf_charge_target') | float(80) %}
+          {% set cap = states('sensor.leaf_battery_capacity_kwh') | float(0) %}
+          {% set eff = states('input_number.leaf_charging_efficiency') | float(88) / 100 %}
+          {% set kw = states('input_number.leaf_charger_power') | float(0) %}
+          {% if soc is none or cap <= 5 or kw < 0.3 %}
+            {{ none }}
+          {% elif soc >= target %}
+            0
+          {% else %}
+            {{ ((target - soc) / 100 * cap / eff / kw * 60) | round(0) }}
+          {% endif %}
+        availability: "{{ states('input_number.leaf_charger_power') | float(0) >= 0.3 }}"

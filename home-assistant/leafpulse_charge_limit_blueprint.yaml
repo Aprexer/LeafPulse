@@ -1,0 +1,250 @@
+# LeafPulse — stop charging at your limit
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Needs leafpulse_package.yaml (helpers and the estimated-SOC sensor) and the LeafPulse app.
+blueprint:
+  name: LeafPulse — stop charging at a limit
+  description: >
+    Pauses your charger when the LEAF reaches the limit in
+    input_number.leaf_charge_target (default 80%), using LeafPulse's last battery
+    reading plus the energy your charger has added. Turn on
+    input_boolean.leaf_charge_bypass to charge to 100% once; it resets when you
+    unplug. If the last reading is too old to trust, the automation tells you and
+    does not stop the charge.
+  domain: automation
+  source_url: https://github.com/Aprexer/leafpulse/blob/main/home-assistant/leafpulse_charge_limit_blueprint.yaml
+  input:
+    charger_status:
+      name: Charger status sensor
+      description: A sensor whose state shows whether the car is plugged in (e.g. Wallbox "Status description").
+      selector:
+        entity:
+          domain: sensor
+    unplugged_states:
+      name: Unplugged states
+      description: Status values that mean nothing is plugged in.
+      default: [Ready, Disconnected, unavailable, unknown]
+      selector:
+        text:
+          multiple: true
+    charger_power:
+      name: Charging power sensor
+      description: In kW or W (W is converted).
+      selector:
+        entity:
+          domain: sensor
+    charger_energy:
+      name: Energy added sensor
+      description: Energy the charger has delivered, in kWh. Per-session or lifetime totals both work.
+      selector:
+        entity:
+          domain: sensor
+    pause_switch:
+      name: Charging switch
+      description: Turned off to pause charging and on to resume (e.g. Wallbox "Pause/Resume").
+      selector:
+        entity:
+          domain: switch
+    notify_service:
+      name: Notification service
+      description: e.g. notify.mobile_app_your_phone. Leave empty for no notifications.
+      default: ""
+      selector:
+        text:
+    energy_price:
+      name: Electricity price per kWh
+      description: Used for the cost line in notifications. 0 hides it.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 0.001
+          mode: box
+    currency:
+      name: Currency symbol
+      default: "$"
+      selector:
+        text:
+    max_reading_age:
+      name: Oldest battery reading to trust (hours)
+      description: If the app's last SOC reading is older than this at plug-in, auto-stop is skipped for that charge.
+      default: 12
+      selector:
+        number:
+          min: 1
+          max: 72
+          unit_of_measurement: h
+
+mode: queued
+max: 10
+
+variables:
+  status_entity: !input charger_status
+  unplugged_states: !input unplugged_states
+  power_entity: !input charger_power
+  energy_entity: !input charger_energy
+  pause_entity: !input pause_switch
+  notify_service: !input notify_service
+  price: !input energy_price
+  currency: !input currency
+  max_age_h: !input max_reading_age
+  target: >
+    {{ 100 if is_state('input_boolean.leaf_charge_bypass', 'on')
+       else states('input_number.leaf_charge_target') | float(80) }}
+  soc: "{{ states('sensor.leaf_estimated_state_of_charge') | float(none) }}"
+  session_kwh: "{{ states('input_number.leaf_session_energy') | float(0) }}"
+  cost_line: >
+    {% if price | float(0) > 0 %} · about {{ currency }}{{ '%.2f' | format(session_kwh * price | float(0)) }}{% endif %}
+
+trigger:
+  - platform: state
+    entity_id: !input charger_status
+    id: status
+  - platform: state
+    entity_id: !input charger_energy
+    id: energy
+  - platform: state
+    entity_id: !input charger_power
+    id: power
+  - platform: numeric_state
+    entity_id: sensor.leaf_estimated_state_of_charge
+    above: input_number.leaf_charge_target
+    id: limit
+  - platform: state
+    entity_id: input_boolean.leaf_charge_bypass
+    id: bypass
+
+action:
+  - choose:
+      # Plugged in: start from the app's last reading if it's recent enough, or from the
+      # previous charge's estimate if the car hasn't reported since (not driven with the phone).
+      - conditions:
+          - condition: trigger
+            id: status
+          - "{{ trigger.from_state is not none and trigger.from_state.state in unplugged_states }}"
+          - "{{ trigger.to_state.state not in unplugged_states }}"
+        sequence:
+          - variables:
+              read: "{{ state_attr('sensor.leaf_state_of_charge', 'updated_at') }}"
+              age_h: "{{ ((as_timestamp(now()) - as_timestamp(read, 0)) / 3600) if read else 9999 }}"
+              measured: "{{ states('sensor.leaf_state_of_charge') | float(-1) }}"
+              prev_h: "{{ (as_timestamp(now()) - as_timestamp(states('input_datetime.leaf_charge_started'), 0)) / 3600 }}"
+              carried: >
+                {{ state_attr('sensor.leaf_estimated_state_of_charge', 'source') == 'estimated from energy added'
+                   and prev_h <= max_age_h | float(12) * 2 }}
+              start: >
+                {% if carried %}{{ states('sensor.leaf_estimated_state_of_charge') | float(-1) }}
+                {% elif measured >= 0 and age_h <= max_age_h | float(12) %}{{ measured }}
+                {% else %}-1{% endif %}
+              trusted: "{{ start | float(-1) >= 0 }}"
+          - action: input_number.set_value
+            target: { entity_id: input_number.leaf_soc_at_plug_in }
+            data: { value: "{{ start | float(-1) }}" }
+          - action: input_number.set_value
+            target: { entity_id: input_number.leaf_energy_baseline }
+            data: { value: "{{ states(energy_entity) | float(0) }}" }
+          - action: input_number.set_value
+            target: { entity_id: input_number.leaf_session_energy }
+            data: { value: 0 }
+          - action: input_datetime.set_datetime
+            target: { entity_id: input_datetime.leaf_charge_started }
+            data: { timestamp: "{{ as_timestamp(now()) }}" }
+          - if: "{{ not trusted and notify_service | length > 0 }}"
+            then:
+              - action: "{{ notify_service }}"
+                data:
+                  title: LEAF plugged in
+                  message: >
+                    No recent battery reading ({{ 'none' if age_h > 9000 else (age_h | round(0) | int) ~ ' h old' }}),
+                    so this charge won't stop automatically. Turn the car on near your phone to get a reading.
+
+      # Unplugged: reset the bypass. The session's estimate stays until the car reports again.
+      - conditions:
+          - condition: trigger
+            id: status
+          - "{{ trigger.to_state.state in unplugged_states }}"
+          - "{{ trigger.from_state is not none and trigger.from_state.state not in unplugged_states }}"
+        sequence:
+          - action: input_boolean.turn_off
+            target: { entity_id: input_boolean.leaf_charge_bypass }
+          - action: input_number.set_value
+            target: { entity_id: input_number.leaf_charger_power }
+            data: { value: 0 }
+
+      # Track energy added this session (handles chargers that reset per session).
+      # Ignored while unplugged, so a counter reset doesn't wipe the last charge's estimate.
+      - conditions:
+          - condition: trigger
+            id: energy
+          - "{{ states(energy_entity) | is_number }}"
+          - "{{ states(status_entity) not in unplugged_states }}"
+        sequence:
+          - variables:
+              now_kwh: "{{ states(energy_entity) | float(0) }}"
+              base: "{{ states('input_number.leaf_energy_baseline') | float(0) }}"
+          - if: "{{ now_kwh < base }}"
+            then:
+              - action: input_number.set_value
+                target: { entity_id: input_number.leaf_energy_baseline }
+                data: { value: 0 }
+          - action: input_number.set_value
+            target: { entity_id: input_number.leaf_session_energy }
+            data: { value: "{{ [0, now_kwh - (base if now_kwh >= base else 0)] | max | round(2) }}" }
+
+      - conditions:
+          - condition: trigger
+            id: power
+          - "{{ states(power_entity) | is_number }}"
+        sequence:
+          - variables:
+              raw: "{{ states(power_entity) | float(0) }}"
+              kw: "{{ raw / 1000 if raw > 400 or state_attr(power_entity, 'unit_of_measurement') == 'W' else raw }}"
+          - action: input_number.set_value
+            target: { entity_id: input_number.leaf_charger_power }
+            data: { value: "{{ [kw, 400] | min | round(2) }}" }
+
+      # Reached the limit while charging (and not bypassed): pause.
+      - conditions:
+          - condition: trigger
+            id: limit
+          - condition: state
+            entity_id: input_boolean.leaf_charge_bypass
+            state: "off"
+          - condition: state
+            entity_id: !input pause_switch
+            state: "on"
+          - "{{ states('input_number.leaf_soc_at_plug_in') | float(-1) >= 0 or state_attr('sensor.leaf_estimated_state_of_charge', 'source') == 'live reading' }}"
+          - "{{ states('input_number.leaf_charger_power') | float(0) > 0.3 }}"
+        sequence:
+          - action: switch.turn_off
+            target: { entity_id: "{{ pause_entity }}" }
+          - if: "{{ notify_service | length > 0 }}"
+            then:
+              - action: "{{ notify_service }}"
+                data:
+                  title: LEAF charged to {{ target | round(0) | int }}%
+                  message: >
+                    Charging paused at about {{ soc | round(0) | int }}%. Added {{ session_kwh | round(1) }} kWh{{ cost_line }}.
+                  data:
+                    push:
+                      interruption-level: time-sensitive
+
+      # Bypass turned on: resume if paused. Turned off: stop if already past the limit.
+      - conditions:
+          - condition: trigger
+            id: bypass
+        sequence:
+          - if:
+              - condition: state
+                entity_id: input_boolean.leaf_charge_bypass
+                state: "on"
+            then:
+              - if: "{{ states(status_entity) not in unplugged_states and is_state(pause_entity, 'off') }}"
+                then:
+                  - action: switch.turn_on
+                    target: { entity_id: "{{ pause_entity }}" }
+            else:
+              - if: "{{ soc is not none and soc >= states('input_number.leaf_charge_target') | float(80) and is_state(pause_entity, 'on') }}"
+                then:
+                  - action: switch.turn_off
+                    target: { entity_id: "{{ pause_entity }}" }
