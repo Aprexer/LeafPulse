@@ -107,10 +107,24 @@
   .vs{font-size:11px;opacity:.65;margin-top:2px}
   .vs.ok{color:#2ee6a6;opacity:.9}.vs.warn{color:#ffc247;opacity:1}.vs.bad{color:#ff6a3d;opacity:1}
   .foot{position:relative;margin-top:12px;font-size:11.5px;opacity:.5;text-align:center}
+  .peak{position:relative;display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:11px 12px 11px 14px;border-radius:16px;font-size:13px;line-height:1.35;
+    color:#cfe9ff;background:rgba(124,200,255,.09);box-shadow:inset 0 0 0 1px rgba(124,200,255,.28);animation:enter .5s both}
+  .peak[hidden]{display:none}
+  .peak.warn{color:#ffe2b0;background:rgba(255,181,71,.10);box-shadow:inset 0 0 0 1px rgba(255,181,71,.38)}
+  .peak .pi{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.08)}
+  .peak .pt{flex:1} .peak .pt b{font-weight:700}
+  .peak .btn{flex:none;white-space:nowrap}
+  .row[hidden]{display:none}
+  .bypass .chip.pk{opacity:1}
+  .chip.pk{padding:8px 11px}
   `;
   const BOLT = '<svg viewBox="0 0 24 24" height="100%"><path fill="currentColor" d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>';
   const CAR = '<svg viewBox="0 0 24 24" width="22"><path fill="currentColor" d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>';
   const ROCKET = '<svg viewBox="0 0 24 24" width="24"><path fill="currentColor" d="M13.13 22.19l-1.63-3.83c1.57-.58 3.04-1.36 4.4-2.27l-2.77 6.1M5.64 12.5l-3.83-1.63 6.1-2.77C7 9.46 6.22 10.93 5.64 12.5M21.61 2.39S16.66.269 11 5.93c-2.19 2.19-3.5 4.6-4.35 6.71-.28.75-.09 1.57.46 2.13l2.13 2.12c.55.56 1.37.74 2.12.46 2.11-.84 4.52-2.17 6.71-4.35 5.66-5.66 3.54-10.61 3.54-10.61m-7.07 7.07c-.78-.78-.78-2.05 0-2.83s2.05-.78 2.83 0c.77.78.78 2.05 0 2.83-.78.78-2.05.78-2.83 0M8.88 16.53l-1.41-1.41 1.41 1.41M6.24 22l3.64-3.64c-.34-.09-.67-.24-.97-.45L4.83 22h1.41M2 22h1.41l4.77-4.76-1.42-1.41L2 20.59V22m0-2.83l4.09-4.08c-.21-.3-.36-.62-.45-.97L2 17.76v1.41z"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" width="18"><path fill="currentColor" d="M12 2a9.9 9.9 0 0 0-3 .5 10 10 0 0 1 0 19A10 10 0 1 0 12 2z"/></svg>';
+  // Rocky Mountain Power (Utah) time-of-use: 6-10pm weekdays except holidays. The window itself comes from
+  // sensor.leaf_next_peak_start; these rates are only used for the wording.
+  const PEAK_MODES = [['Off', 'Off'], ['Warn only', 'Warn'], ['Pause for peak', 'Avoid']];
   const R = 92, C = 2 * Math.PI * R;
 
   class LeafChargeCard extends HTMLElement {
@@ -150,6 +164,7 @@
             <div class="soc" id="soc">—</div><div class="socsub" id="socsub"></div><div class="tag" id="tag"></div></div>
         </div>
         <div class="eta" id="eta"></div><div class="cost" id="cost"></div>
+        <div class="peak" id="peak" hidden><div class="pi">${MOON}</div><div class="pt" id="peakt"></div><button class="btn" id="peakb" hidden></button></div>
         <div class="grid">
           ${['power:Power', 'added:Added', 'left:Time left', 'soh:Health', 'gap:Cell gap', 'temp:Pack temp']
             .map(t => `<div class="tile"><div class="tl">${t.split(':')[1]}</div><div class="tv" id="t_${t.split(':')[0]}">—</div></div>`).join('')}
@@ -160,6 +175,8 @@
         </div></div>
         <div class="row"><span class="label">Charge limit</span>
           ${[70, 80, 90].map(v => `<button class="chip" data-v="${v}">${v}%</button>`).join('')}</div>
+        <div class="row" id="peakrow" hidden><span class="label">Peak rate 6–10pm</span>
+          ${PEAK_MODES.map(([v, l]) => `<button class="chip pk" data-m="${v}">${l}</button>`).join('')}</div>
         <button class="big" id="bypass"><div class="bi">${ROCKET}</div>
           <div><div class="bt" id="bt"></div><div class="bs" id="bs"></div></div></button>
         <div class="row"><span class="label" id="wbtext"></span><button class="btn" id="pause"></button></div>
@@ -167,13 +184,18 @@
       </div>`;
       const $ = id => this._root.getElementById(id);
       this._el = { card: this._root.querySelector('.card'), name: this._root.querySelector('.name') };
-      ['sub', 'pill', 'pilltext', 'arc', 'flow', 'tickg', 'spark', 'soc', 'socsub', 'tag', 'eta', 'cost', 'bypass', 'bt', 'bs', 'wbtext', 'pause', 'foot',
+      ['peak', 'peakt', 'peakb', 'peakrow', 'sub', 'pill', 'pilltext', 'arc', 'flow', 'tickg', 'spark', 'soc', 'socsub', 'tag', 'eta', 'cost', 'bypass', 'bt', 'bs', 'wbtext', 'pause', 'foot',
         't_power', 't_added', 't_left', 't_soh', 't_gap', 't_temp', 'veh',
         'w_v12', 'w_qc', 'w_l2', 't_v12', 't_qc', 't_l2', 's_v12', 's_qc', 's_l2'].forEach(k => this._el[k] = $(k));
-      this._root.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      this._root.querySelectorAll('.chip:not(.pk)').forEach(b => b.addEventListener('click', () => {
         this._haptic('selection');
         this._call('input_number', 'set_value', { entity_id: 'input_number.leaf_charge_target', value: Number(b.dataset.v) });
       }));
+      this._root.querySelectorAll('.chip.pk').forEach(b => b.addEventListener('click', () => {
+        this._haptic('selection');
+        this._call('input_select', 'select_option', { entity_id: 'input_select.leaf_peak_mode', option: b.dataset.m });
+      }));
+      this._el.peakb.addEventListener('click', () => { this._haptic('medium'); this._peakAction(this._el.peakb.dataset.act); });
       this._el.bypass.addEventListener('click', () => {
         this._haptic('heavy');
         this._call('input_boolean', 'toggle', { entity_id: 'input_boolean.leaf_charge_bypass' });
@@ -181,11 +203,20 @@
       this._el.pause.addEventListener('click', () => {
         const sw = `switch.${this._cfg.wallbox}_pause_resume`;
         this._haptic('medium');
+        if (this._st('input_boolean.leaf_peak_paused') === 'on') { this._peakAction('now'); return; }
         this._call('switch', this._st(sw) === 'on' ? 'turn_off' : 'turn_on', { entity_id: sw });
       });
       setInterval(() => this._update(), 30000);
     }
 
+    _peakAction(act) {
+      // 'now' = charge through peak hours for this plug-in; 'pause' = hold until peak ends.
+      if (act === 'now') this._call('input_boolean', 'turn_on', { entity_id: 'input_boolean.leaf_peak_override' });
+      else if (act === 'pause') {
+        this._call('input_boolean', 'turn_on', { entity_id: 'input_boolean.leaf_peak_paused' });
+        this._call('switch', 'turn_off', { entity_id: `switch.${this._cfg.wallbox}_pause_resume` });
+      }
+    }
     _call(domain, service, data) { this._hass && this._hass.callService(domain, service, data); }
     _haptic(type) { this.dispatchEvent(new CustomEvent('haptic', { detail: type, bubbles: true, composed: true })); }
     _st(id) { const s = this._hass && this._hass.states[id]; return s ? s.state : undefined; }
@@ -226,6 +257,7 @@
       else if (estimate != null && (charging || measured == null || estAge + 60 < age)) { soc = estimate; source = 'estimate'; }
       const paused = /paus/i.test(status);
       const reached = soc != null && soc >= target - 0.5;
+      const pk = this._peakInfo();
 
       e.card.classList.toggle('charging', charging);
       e.card.classList.toggle('bypass', bypass);
@@ -239,6 +271,7 @@
 
       let pill = 'idle', text = 'Unplugged';
       if (charging) { pill = bypass ? 'warn' : 'go'; text = bypass ? 'Charging to 100%' : 'Charging'; }
+      else if (pk && pk.held && !unplugged) { pill = 'hold'; text = `Waiting till ${pk.endTxt}`; }
       else if (paused && reached) { pill = 'hold'; text = `Holding at ${Math.round(target)}%`; }
       else if (paused) { pill = 'hold'; text = 'Paused'; }
       else if (!unplugged) { pill = 'hold'; text = 'Plugged in'; }
@@ -265,7 +298,8 @@
       if (charging && left != null && left > 0) {
         const done = new Date(Date.now() + left * 60000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         e.eta.innerHTML = `<b>${Math.round(target)}%</b> by <b>${done}</b> · ${this._dur(left)} left`;
-      } else if (paused && reached) e.eta.innerHTML = `Stopped at your <b>${Math.round(target)}%</b> limit`;
+      } else if (pk && pk.held && !unplugged) e.eta.innerHTML = `Carries on at <b>${pk.endTxt}</b> to <b>${Math.round(target)}%</b>`;
+      else if (paused && reached) e.eta.innerHTML = `Stopped at your <b>${Math.round(target)}%</b> limit`;
       else if (!unplugged && reached) e.eta.innerHTML = `Already at <b>${Math.round(target)}%</b>`;
       else if (unplugged && soc != null) e.eta.innerHTML = `Plug in to charge to <b>${Math.round(target)}%</b>`;
       else e.eta.textContent = '';
@@ -282,20 +316,68 @@
       set('temp', tempC == null ? null : (f ? (tempC * 1.8 + 32).toFixed(0) : tempC.toFixed(0)), f ? '°F' : '°C');
 
       this._vehicle();
+      this._peak(pk, { charging, unplugged, reached, left });
 
-      this._root.querySelectorAll('.chip').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === Math.round(limit)));
+      this._root.querySelectorAll('.chip:not(.pk)').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === Math.round(limit)));
       e.bypass.classList.toggle('on', bypass);
       e.bt.textContent = bypass ? 'Bypass on — charging to 100%' : 'Need the full range?';
       e.bs.textContent = bypass ? `Tap to go back to ${Math.round(limit)}%. Resets when you unplug.` : 'Tap to charge to 100% for this trip';
 
       const swState = this._st(`switch.${this._cfg.wallbox}_pause_resume`);
       e.pause.hidden = !swState || swState === 'unavailable';
-      e.pause.textContent = swState === 'on' ? 'Pause charging' : 'Resume charging';
+      e.pause.textContent = pk && pk.held ? 'Charge now' : (swState === 'on' ? 'Pause charging' : 'Resume charging');
       e.wbtext.textContent = unplugged ? '' : `Wallbox: ${status}`;
       e.foot.textContent = socEnt
         ? (live ? 'Live from LeafPulse' : `Not live · last update from LeafPulse ${this._ago(age)}`)
         : 'Waiting for the first reading from the LeafPulse app';
       e.foot.title = 'LeafPulse by Aprexer · github.com/Aprexer/LeafPulse';
+    }
+
+    _peakInfo() {
+      const h = this._hass, modeEnt = h.states['input_select.leaf_peak_mode'];
+      if (!modeEnt) return null;
+      const startEnt = h.states['sensor.leaf_next_peak_start'];
+      const start = startEnt ? new Date(startEnt.state) : null, ok = start && Number.isFinite(start.getTime());
+      const end = ok ? new Date(start.getTime() + 4 * 3600e3) : null, now = Date.now();
+      const t = d => d.toLocaleTimeString([], d.getMinutes() ? { hour: 'numeric', minute: '2-digit' } : { hour: 'numeric' });
+      const summer = [5, 6, 7, 8].includes(new Date().getMonth());
+      return {
+        mode: modeEnt.state, start: ok ? start : null, end,
+        on: this._st('binary_sensor.leaf_peak_hours') === 'on' || (ok && start.getTime() <= now && now < end.getTime()),
+        held: this._st('input_boolean.leaf_peak_paused') === 'on',
+        override: this._st('input_boolean.leaf_peak_override') === 'on',
+        startTxt: ok ? t(start) : '6 PM', endTxt: ok ? t(end) : '10 PM',
+        rate: summer ? 34 : 30, offRate: summer ? 7.5 : 6.6,
+      };
+    }
+
+    _peak(pk, s) {
+      const e = this._el;
+      e.peakrow.hidden = !pk;
+      if (!pk) { e.peak.hidden = true; return; }
+      this._root.querySelectorAll('.chip.pk').forEach(b => b.classList.toggle('on', b.dataset.m === pk.mode));
+      const avoid = pk.mode === 'Pause for peak', warn = pk.mode === 'Warn only';
+      let html = '', cls = '', btn = '', act = '';
+      const soon = pk.start && !pk.on && s.charging && s.left != null &&
+        Date.now() + s.left * 60000 > pk.start.getTime() && pk.start.getTime() - Date.now() < 12 * 3600e3;
+      if (pk.held && !s.unplugged) {
+        html = `<b>Waiting for cheaper power</b> · peak rate until ${pk.endTxt}, then it carries on`; btn = 'Charge now'; act = 'now';
+      } else if (pk.on && s.charging && pk.override) {
+        cls = 'warn'; html = `<b>Charging at the peak rate</b> · about ${pk.rate}¢/kWh until ${pk.endTxt}`;
+      } else if (pk.on && s.charging && warn) {
+        cls = 'warn'; html = `<b>Peak rate now</b> · about ${pk.rate}¢/kWh until ${pk.endTxt}, ${pk.offRate}¢ after`; btn = `Pause till ${pk.endTxt}`; act = 'pause';
+      } else if (soon && !pk.override && (avoid || warn)) {
+        cls = 'warn';
+        html = avoid ? `<b>Peak rate from ${pk.startTxt}</b> · this charge pauses then and finishes after ${pk.endTxt}`
+          : `<b>Peak rate from ${pk.startTxt}</b> · the rest of this charge would cost about ${pk.rate}¢/kWh`;
+        if (avoid) { btn = 'Keep charging'; act = 'now'; }
+      } else if (pk.on && avoid && !pk.override && (s.unplugged || (!s.charging && !s.reached))) {
+        html = `<b>Peak rate until ${pk.endTxt}</b> · ${s.unplugged ? 'plug in any time, charging waits until then' : 'charging starts then'}`;
+      }
+      e.peak.hidden = !html;
+      e.peak.className = 'peak' + (cls ? ' ' + cls : '');
+      e.peakt.innerHTML = html;
+      e.peakb.hidden = !btn; e.peakb.textContent = btn; e.peakb.dataset.act = act;
     }
 
     _vehicle() {
