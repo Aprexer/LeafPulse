@@ -20,7 +20,7 @@ LeafPulse is a one-person project. I'm a LEAF owner who wanted to see what my ba
 
 The best way to show interest: ⭐ star this page, try the app, and post how it works on your car (the in-app log, which removes your VIN, helps a lot).
 
-### Compatibility
+## Compatibility
 
 Second-generation (ZE1) LEAFs are 2018–2025 models. The 2026 third-generation LEAF is a different car and is **not supported**.
 
