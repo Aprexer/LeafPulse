@@ -20,6 +20,15 @@
       "screenshots": [],
       "versions": [
         {
+          "version": "1.1.5",
+          "buildVersion": "105",
+          "date": "2026-11-22",
+          "localizedDescription": "New Charging card: see when a charge has finished and the estimated battery %, with the car off.\n\nShows Charging, Charging complete, Waiting for off-peak, Stopped early or Not plugged in, using Home Assistant's estimate from the energy the Wallbox added. Needs Home Assistant set up in LeafPulse.",
+          "downloadURL": "https://github.com/Aprexer/LeafPulse/releases/download/v1.1.5/LeafPulse.ipa",
+          "size": 611172,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "1.1.4",
           "buildVersion": "104",
           "date": "2026-11-22",
@@ -54,11 +63,11 @@
           "NSLocalNetworkUsageDescription": "Send your LEAF's battery readings to your Home Assistant server on your home network."
         }
       },
-      "version": "1.1.4",
+      "version": "1.1.5",
       "versionDate": "2026-11-22",
-      "versionDescription": "LeafPulse naming everywhere\n\n- Home Assistant sensors are now named \"LeafPulse ...\" (entity IDs unchanged, so dashboards and automations keep working).\n- Widget is listed as LeafPulse.\n- Internal project, target and Keychain names updated from the old Leaf Battery name; your saved Home Assistant token carries over.",
-      "downloadURL": "https://github.com/Aprexer/LeafPulse/releases/download/v1.1.4/LeafPulse.ipa",
-      "size": 573453
+      "versionDescription": "New Charging card: see when a charge has finished and the estimated battery %, with the car off.\n\nShows Charging, Charging complete, Waiting for off-peak, Stopped early or Not plugged in, using Home Assistant's estimate from the energy the Wallbox added. Needs Home Assistant set up in LeafPulse.",
+      "downloadURL": "https://github.com/Aprexer/LeafPulse/releases/download/v1.1.5/LeafPulse.ipa",
+      "size": 611172
     }
   ],
   "news": [],
