@@ -12,7 +12,11 @@ LeafPulse reads your LEAF's battery through a Vgate vLinker MC+ Bluetooth OBD ad
 
 ## About this project
 
-LeafPulse is a one-person project. I'm a LEAF owner who wanted to see what my battery is really doing and have my charger stop at 80% without thinking about it. I designed it, test it on my own car every day, and decide what goes in. The code itself was written with a lot of help from AI coding tools, and I'd rather say that up front than have anyone guess.
+LeafPulse started as a fix for my own car. As my LEAF has got older and its battery health has slowly dropped, I've wanted to take better care of what's left. The usual advice for making a LEAF battery last is to keep it roughly between 20% and 80% and not leave it sitting full. With work and a busy schedule, I can't be down at the car unplugging it at the right moment. My LEAF also doesn't have the connected services that report to Nissan's servers, so there's no official app showing its charge or stopping a charge for me.
+
+LeafPulse is the next best thing. It reads the battery straight from the car through a Bluetooth OBD adapter, sends the numbers to Home Assistant, and has Home Assistant stop the charger at 80% on its own. The battery stays in a healthier range without me having to think about it.
+
+It's a one-person project. I designed it, test it on my own car every day, and decide what goes in. The code itself was written with a lot of help from AI coding tools, and I'd rather say that up front than have anyone guess.
 
 **The source code isn't public yet, but it's available on request.** If you'd like to read it, help develop it, or get it working on a different LEAF, [open an Issue](https://github.com/Aprexer/LeafPulse/issues/new) and tell me what you'd like to work on. I'm happy to give access to people who want to build it with me. If there's enough interest, the plan is to make LeafPulse fully open source.
 
