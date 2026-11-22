@@ -16,6 +16,8 @@ LeafPulse is a one-person project. I'm a LEAF owner who wanted to see what my ba
 
 **The source code isn't public yet, but it's available on request.** If you'd like to read it, help develop it, or get it working on a different LEAF, [open an Issue](https://github.com/Aprexer/LeafPulse/issues/new) and tell me what you'd like to work on. I'm happy to give access to people who want to build it with me. If there's enough interest, the plan is to make LeafPulse fully open source.
 
+**How the downloads are made:** every IPA on the [Releases](https://github.com/Aprexer/LeafPulse/releases) page is built automatically by GitHub Actions on GitHub's own servers from the LeafPulse source code. It's then published here and to the store source, so nothing is built or uploaded by hand.
+
 The best way to show interest: ⭐ star this page, try the app, and post how it works on your car (the in-app log, which removes your VIN, helps a lot).
 
 ### Compatibility
