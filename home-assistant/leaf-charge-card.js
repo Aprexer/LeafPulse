@@ -469,4 +469,186 @@
   if (!customElements.get('leaf-charge-card')) customElements.define('leaf-charge-card', LeafChargeCard);
   window.customCards = window.customCards || [];
   window.customCards.push({ type: 'leaf-charge-card', name: 'Leaf charge card', description: 'LEAF battery + Wallbox charge limit with bypass' });
+
+  // ---------------------------------------------------------------------------------------------
+  // LeafPulse power bill card — type: custom:leafpulse-bill-card
+  // Hourly whole-home use from Home Assistant's Energy grid source (e.g. the Opower integration),
+  // split into car and house using the Wallbox, priced on both Rocky Mountain Power (Utah) plans.
+  // Options: wallbox, meter (statistic id), bill_day (1-28), rates {summer|winter: {t1, t2, on, off}} in cents.
+  const BILL_CSS = `
+  :host{display:block}
+  .card{position:relative;overflow:hidden;border-radius:26px;padding:18px 20px;color:#e9f5f0;
+    background:radial-gradient(120% 90% at 50% 0%,#13302f 0%,#0b1b1d 55%,#081213 100%);
+    box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
+    font-family:var(--paper-font-body1_-_font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)}
+  .top{display:flex;align-items:center;gap:10px}
+  .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,224,138,.12);color:#ffe08a}
+  .name{font-weight:700;font-size:17px} .sub{font-size:12px;opacity:.6}
+  .seg{margin-left:auto;display:flex;gap:4px;background:rgba(255,255,255,.06);padding:3px;border-radius:12px}
+  .seg button{border:0;cursor:pointer;padding:6px 10px;border-radius:9px;font-weight:700;font-size:12.5px;color:#cfe;background:transparent}
+  .seg button.on{background:#2ee6a6;color:#05261c}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+  .plan{border-radius:18px;padding:12px 14px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+  .plan.best{background:rgba(46,230,166,.10);box-shadow:inset 0 0 0 1.5px rgba(46,230,166,.5)}
+  .pl{font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:.6px}
+  .pv{font-size:28px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .ps{font-size:12px;opacity:.65;margin-top:1px}
+  .plan.best .pl:after{content:" · cheaper";color:#2ee6a6;opacity:1}
+  .verdict{margin:12px 2px 0;font-size:14px;line-height:1.4} .verdict b{color:#2ee6a6} .verdict b.bad{color:#ffb547}
+  .bar{display:flex;height:12px;border-radius:8px;overflow:hidden;margin:16px 0 6px;background:rgba(255,255,255,.06)}
+  .bar i{display:block;height:100%} .bar .car{background:linear-gradient(90deg,#00c2ff,#2ee6a6)} .bar .house{background:rgba(255,255,255,.25)} .bar .pk{background:#ffb547}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;opacity:.85}
+  .legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0;background:var(--c)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .tile{background:rgba(255,255,255,.05);border-radius:16px;padding:10px 12px}
+  .tl{font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:.6px}
+  .tv{font-size:19px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums} .tv small{font-size:12px;font-weight:600;opacity:.6;margin-left:2px}
+  .ts{font-size:11px;opacity:.6;margin-top:2px}
+  .foot{margin-top:12px;font-size:11.5px;opacity:.5;text-align:center;line-height:1.4}
+  .msg{padding:28px 6px;text-align:center;opacity:.7;font-size:14px}
+  `;
+  const BILL_ICON = '<svg viewBox="0 0 24 24" width="22"><path fill="currentColor" d="M3 22V3l1.5 1.5L6 3l1.5 1.5L9 3l1.5 1.5L12 3l1.5 1.5L15 3l1.5 1.5L18 3l1.5 1.5L21 3v19l-1.5-1.5L18 22l-1.5-1.5L15 22l-1.5-1.5L12 22l-1.5-1.5L9 22l-1.5-1.5L6 22l-1.5-1.5zm3-5h12v-2H6zm0-4h12v-2H6zm0-4h12V7H6z"/></svg>';
+  // Rocky Mountain Power Utah Schedule 1, energy charges in cents/kWh (effective 10 Aug 2026).
+  const RMP_RATES = { summer: { t1: 9.8332, t2: 12.5263, on: 33.6173, off: 7.4705 }, winter: { t1: 8.7020, t2: 11.0852, on: 29.7498, off: 6.6111 } };
+
+  // RMP time-of-use holidays (off-peak all day). A Saturday holiday moves to Friday, Sunday to Monday.
+  function rmpHolidays(y) {
+    const key = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, out = new Set();
+    const obs = d => { const w = d.getDay(); if (w === 6) d.setDate(d.getDate() - 1); else if (w === 0) d.setDate(d.getDate() + 1); return d; };
+    const nth = (m, wd, n) => { const d = new Date(y, m, 1); d.setDate(1 + ((wd - d.getDay() + 7) % 7) + 7 * (n - 1)); return d; };
+    for (const [m, d] of [[0, 1], [6, 4], [6, 24], [11, 25]]) out.add(key(obs(new Date(y, m, d))));
+    out.add(key(nth(1, 1, 3))); out.add(key(nth(8, 1, 1))); out.add(key(nth(10, 4, 4)));
+    const may = new Date(y, 4, 31); may.setDate(31 - ((may.getDay() + 6) % 7)); out.add(key(may));
+    return out;
+  }
+  function isPeakHour(d) {
+    const w = d.getDay(), h = d.getHours();
+    if (w === 0 || w === 6 || h < 18 || h >= 22) return false;
+    const k = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    return !rmpHolidays(d.getFullYear()).has(k) && !rmpHolidays(d.getFullYear() + 1).has(k);
+  }
+
+  class LeafPulseBillCard extends HTMLElement {
+    setConfig(config) {
+      this._cfg = Object.assign({ wallbox: 'wallbox_pulsar_plus_sn_000000', bill_day: 1, title: 'Power bill' }, config || {});
+      this._rates = { summer: Object.assign({}, RMP_RATES.summer, (this._cfg.rates || {}).summer), winter: Object.assign({}, RMP_RATES.winter, (this._cfg.rates || {}).winter) };
+      this._period = 'this'; this._data = {}; this._at = {};
+    }
+    getCardSize() { return 6; }
+    getGridOptions() { return { columns: 12, rows: 'auto', min_columns: 6 }; }
+    set hass(hass) {
+      this._hass = hass;
+      if (!this._root) this._build();
+      const p = this._period;
+      if (!this._busy && (!this._at[p] || Date.now() - this._at[p] > 30 * 60e3)) this._load(p);
+    }
+    _build() {
+      this._root = this.attachShadow({ mode: 'open' });
+      this._root.innerHTML = `<style>${BILL_CSS}</style><div class="card">
+        <div class="top"><div class="ic">${BILL_ICON}</div><div><div class="name"></div><div class="sub" id="sub"></div></div>
+          <div class="seg"><button data-p="this">This month</button><button data-p="last">Last month</button></div></div>
+        <div id="body"><div class="msg">Loading your meter data…</div></div>
+        <div class="foot" id="foot"></div></div>`;
+      this._root.querySelector('.name').textContent = this._cfg.title;
+      this._root.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+        this._period = b.dataset.p; this._paint();
+        if (!this._at[this._period]) this._load(this._period);
+      }));
+      this._paint();
+    }
+    _cycle(which) {
+      // Billing cycle containing now (or the one before), starting on bill_day.
+      const bd = Math.min(28, Math.max(1, Number(this._cfg.bill_day) || 1)), now = new Date();
+      let s = new Date(now.getFullYear(), now.getMonth(), bd);
+      if (s > now) s.setMonth(s.getMonth() - 1);
+      if (which === 'last') { const e = new Date(s); s = new Date(s); s.setMonth(s.getMonth() - 1); return { start: s, end: e, partial: false }; }
+      const e = new Date(s); e.setMonth(e.getMonth() + 1);
+      return { start: s, end: e, partial: true };
+    }
+    async _meterId() {
+      if (this._cfg.meter) return this._cfg.meter;
+      if (this._meter) return this._meter;
+      const prefs = await this._hass.callWS({ type: 'energy/get_prefs' });
+      const grid = (prefs.energy_sources || []).find(s => s.type === 'grid');
+      const id = grid && (grid.stat_energy_from || (grid.flow_from && grid.flow_from[0] && grid.flow_from[0].stat_energy_from));
+      return (this._meter = id || null);
+    }
+    async _load(which) {
+      this._busy = true;
+      try {
+        const meter = await this._meterId();
+        if (!meter) { this._data[which] = { error: 'Add your electricity meter to Home Assistant’s Energy dashboard first.' }; return; }
+        const wb = `sensor.${this._cfg.wallbox}_added_energy`, c = this._cycle(which);
+        const end = c.partial ? new Date() : c.end;
+        const r = await this._hass.callWS({ type: 'recorder/statistics_during_period', start_time: c.start.toISOString(), end_time: end.toISOString(),
+          statistic_ids: [meter, wb], period: 'hour', types: ['change'], units: { energy: 'kWh' } });
+        this._data[which] = this._crunch(c, r[meter] || [], r[wb] || []);
+      } catch (e) {
+        this._data[which] = { error: 'Couldn’t read the meter data (' + (e.message || e.code || e) + ').' };
+      } finally { this._busy = false; this._at[which] = Date.now(); this._paint(); }
+    }
+    _crunch(c, meterRows, wbRows) {
+      if (!meterRows.length) return { error: 'No meter readings for this period yet. Utility data usually arrives a day or two late.' };
+      const wbAt = new Map(wbRows.map(x => [new Date(x.start).getTime(), Math.max(0, x.change || 0)]));
+      const vals = meterRows.map(x => Math.max(0, x.change || 0)).sort((a, b) => a - b);
+      const base = vals[Math.floor(vals.length * 0.4)] || 0.5; // typical non-charging hour
+      let total = 0, peak = 0, car = 0, carPeak = 0, est = 0, last = 0, first = Infinity;
+      for (const x of meterRows) {
+        const t = new Date(x.start), m = Math.max(0, x.change || 0), pk = isPeakHour(t);
+        let cv;
+        if (wbAt.has(t.getTime())) cv = Math.min(m, wbAt.get(t.getTime()));
+        else { cv = m > 2.5 ? Math.max(0, m - base) : 0; if (cv > 0) est += cv; }
+        total += m; car += cv; if (pk) { peak += m; carPeak += cv; }
+        last = Math.max(last, t.getTime() + 3600e3); first = Math.min(first, t.getTime());
+      }
+      const r = this._rates[[5, 6, 7, 8].includes(new Date(c.end.getTime() - 86400e3).getMonth()) ? 'summer' : 'winter'];
+      const std = kwh => (Math.min(kwh, 400) * r.t1 + Math.max(0, kwh - 400) * r.t2) / 100;
+      const tou = (pk, all) => (pk * r.on + (all - pk) * r.off) / 100;
+      const days = Math.max(1, (last - first) / 86400e3), cycleDays = (c.end - c.start) / 86400e3;
+      const gap = first - c.start.getTime() > 86400e3 ? new Date(first) : null;
+      return {
+        c, gap, total, peak, car, house: Math.max(0, total - car), estCar: est > car * 0.3, last: new Date(last), days, cycleDays, r,
+        std: std(total), tou: tou(peak, total),
+        carStd: std(total) - std(total - car), carTou: tou(peak, total) - tou(peak - carPeak, total - car),
+        projStd: std(total / days * cycleDays), projTou: tou(peak / days * cycleDays, total / days * cycleDays),
+      };
+    }
+    _paint() {
+      if (!this._root) return;
+      const $ = id => this._root.getElementById(id), d = this._data[this._period];
+      this._root.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.p === this._period));
+      const money = v => new Intl.NumberFormat(undefined, { style: 'currency', currency: (this._hass && this._hass.config.currency) || 'USD' }).format(v);
+      const kwh = v => `${Math.round(v).toLocaleString()}<small>kWh</small>`;
+      const day = dt => dt.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const c = this._cycle(this._period);
+      const label = this._cfg.bill_day > 1 ? `${day(c.start)} – ${day(new Date(c.end - 86400e3))}` : c.start.toLocaleDateString([], { month: 'long' });
+      $('sub').textContent = this._period === 'this' ? `${label} so far` : label;
+      if (!d) { $('body').innerHTML = '<div class="msg">Loading your meter data…</div>'; return; }
+      if (d.error) { $('body').innerHTML = `<div class="msg">${d.error}</div>`; $('foot').textContent = ''; return; }
+      const save = d.std - d.tou, better = save >= 0, pct = d.std > 0 ? Math.abs(save) / d.std * 100 : 0;
+      const proj = this._period === 'this' && d.days < d.cycleDays - 1;
+      const w = v => d.total > 0 ? (v / d.total * 100).toFixed(1) : 0;
+      $('body').innerHTML = `
+        <div class="cmp">
+          <div class="plan ${better ? '' : 'best'}"><div class="pl">Standard</div><div class="pv">${money(d.std)}</div>
+            <div class="ps">${proj ? `on pace for ${money(d.projStd)}` : 'tiered, 400 kWh step'}</div></div>
+          <div class="plan ${better ? 'best' : ''}"><div class="pl">Time-of-use</div><div class="pv">${money(d.tou)}</div>
+            <div class="ps">${proj ? `on pace for ${money(d.projTou)}` : 'peak 6–10pm weekdays'}</div></div>
+        </div>
+        <div class="verdict">${better ? `Time-of-use is <b>${money(save)}</b> cheaper (${pct.toFixed(0)}%)` : `Standard is <b class="bad">${money(-save)}</b> cheaper (${pct.toFixed(0)}%)`}${d.gap ? ' for the days recorded' : (this._period === 'this' ? ' so far this month' : ' for this month')}.
+          The LEAF cost about <b>${money(d.carStd)}</b> to charge on standard, <b>${money(d.carTou)}</b> on time-of-use.</div>
+        <div class="bar"><i class="car" style="width:${w(d.car)}%"></i><i class="house" style="width:${w(d.house - Math.min(d.house, d.peak))}%"></i><i class="pk" style="width:${w(Math.min(d.house, d.peak))}%"></i></div>
+        <div class="legend"><span style="--c:#2ee6a6">LEAF ${Math.round(d.car)} kWh${d.estCar ? ' (estimated)' : ''}</span>
+          <span style="--c:rgba(255,255,255,.4)">House ${Math.round(d.house)} kWh</span>
+          <span style="--c:#ffb547">Peak hours ${Math.round(d.peak)} kWh · ${(d.peak / d.total * 100).toFixed(0)}%</span></div>
+        <div class="grid">
+          <div class="tile"><div class="tl">Total</div><div class="tv">${kwh(d.total)}</div><div class="ts">${(d.total / d.days).toFixed(1)} kWh a day</div></div>
+          <div class="tile"><div class="tl">LEAF</div><div class="tv">${kwh(d.car)}</div><div class="ts">${(d.car / d.total * 100).toFixed(0)}% of your use</div></div>
+          <div class="tile"><div class="tl">Peak share</div><div class="tv">${(d.peak / d.total * 100).toFixed(1)}<small>%</small></div><div class="ts">${d.peak / d.total < 0.2 ? 'low, good for TOU' : 'high for TOU'}</div></div>
+        </div>`;
+      $('foot').textContent = `${d.gap ? `Meter data only starts ${day(d.gap)}, so this month is incomplete. ` : ''}Meter data to ${d.last.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric' })}. Energy charges at Rocky Mountain Power ${d.r === this._rates.summer ? 'summer' : 'winter'} rates, before the monthly charge, taxes and surcharges.`;
+    }
+  }
+  if (!customElements.get('leafpulse-bill-card')) customElements.define('leafpulse-bill-card', LeafPulseBillCard);
+  window.customCards.push({ type: 'leafpulse-bill-card', name: 'LeafPulse power bill', description: 'Monthly electricity use split into car and house, priced on standard and time-of-use plans' });
 })();
