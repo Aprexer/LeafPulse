@@ -10,6 +10,14 @@ LeafPulse reads your LEAF's battery through a Vgate vLinker MC+ Bluetooth OBD ad
 
 > **Tested on one car:** a 2021 Nissan LEAF S Plus (62 kWh, ZE1) with a Vgate vLinker MC+ (BLE). Everything else below is labelled by how much it has actually been checked.
 
+## About this project
+
+LeafPulse is a one-person project. I'm a LEAF owner who wanted to see what my battery is really doing and have my charger stop at 80% without thinking about it. I designed it, test it on my own car every day, and decide what goes in. The code itself was written with a lot of help from AI coding tools, and I'd rather say that up front than have anyone guess.
+
+**The source code isn't public yet, but it's available on request.** If you'd like to read it, help develop it, or get it working on a different LEAF, [open an Issue](https://github.com/Aprexer/LeafPulse/issues/new) and tell me what you'd like to work on. I'm happy to give access to people who want to build it with me. If there's enough interest, the plan is to make LeafPulse fully open source.
+
+The best way to show interest: ⭐ star this page, try the app, and post how it works on your car (the in-app log, which removes your VIN, helps a lot).
+
 ### Compatibility
 
 Second-generation (ZE1) LEAFs are 2018–2025 models. The 2026 third-generation LEAF is a different car and is **not supported**.
@@ -109,7 +117,7 @@ LeafPulse is **free to download and use**. Copyright (C) 2026 Aprexer. All right
 - **You can't** sell it, re-upload the IPA elsewhere, rebrand it, or publish it (or a copy of it) on the App Store or any other store without written permission.
 - It comes with **no warranty**. Check its readings against another tool before relying on them.
 
-The app's source code is private. Versions **1.0.10 and earlier** were released under GPL-3.0 (`LICENSE-GPL-3.0`) and stay under it; they're no longer offered here, but open an Issue if you need their source. The **Home Assistant card, package and blueprint** in `home-assistant/` are GPL-3.0 too, so you can adapt them freely.
+The app's source code is private for now, but available on request to anyone who wants to help develop it (see [About this project](#about-this-project)). Versions **1.0.10 and earlier** were released under GPL-3.0 (`LICENSE-GPL-3.0`) and stay under it; they're no longer offered here, but open an Issue if you need their source. The **Home Assistant card, package and blueprint** in `home-assistant/` are GPL-3.0 too, so you can adapt them freely.
 
 If you see LeafPulse being sold or published by someone else, please open an Issue.
 
